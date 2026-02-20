@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <title>القارئ المتصل ⌚📱</title>
+    <title>القارئ البسيط</title>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- مكتبة الاتصال المباشر (بدون قواعد بيانات) -->
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     
     <style>
         :root {
@@ -16,7 +14,6 @@
             --btn-bg: #edf2f7;
             --btn-hover: #e2e8f0;
             --primary: #3182ce;
-            --success: #38a169;
         }
 
         body.dark-mode {
@@ -59,37 +56,19 @@
             flex-grow: 1;
         }
 
-        .screen { display: none; flex-direction: column; gap: 15px; flex-grow: 1; width: 100%; }
-        .screen.active { display: flex; }
-
-        h2, h3 { text-align: center; color: var(--primary); }
-
-        .input-group {
+        /* شاشة الإدخال */
+        #input-section {
             display: flex;
             flex-direction: column;
-            gap: 5px;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        input[type="number"] {
-            font-size: 32px;
-            text-align: center;
-            padding: 10px;
-            border: 2px solid var(--primary);
-            border-radius: 12px;
-            background: var(--bg-color);
-            color: var(--text-color);
-            letter-spacing: 5px;
+            gap: 15px;
+            flex-grow: 1;
             width: 100%;
-            max-width: 200px;
-            margin: 0 auto;
         }
 
         textarea {
             width: 100%;
             flex-grow: 1;
-            min-height: 200px;
+            min-height: 300px;
             padding: 15px;
             border: 2px dashed var(--primary);
             border-radius: 12px;
@@ -111,64 +90,59 @@
             font-weight: bold;
             font-size: 16px;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        button:active { transform: scale(0.98); }
-        button.primary-btn { background-color: var(--primary); color: white; }
-        button.success-btn { background-color: var(--success); color: white; }
+        button.primary-btn {
+            background-color: var(--primary);
+            color: white;
+            width: 100%;
+            font-size: 20px;
+            padding: 15px;
+        }
+
+        /* شاشة القراءة */
+        #reader-section {
+            display: none;
+            flex-direction: column;
+            flex-grow: 1;
+            width: 100%;
+        }
 
         #text-display {
             font-size: 24px;
             line-height: 1.8;
             text-align: justify;
             word-wrap: break-word;
-            padding-bottom: 80px;
+            padding-bottom: 100px; /* مساحة للأزرار بالأسفل */
         }
 
-        .status-badge {
-            text-align: center;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 14px;
-            background: #feebc8;
-            color: #c05621;
-            width: fit-content;
-            margin: 0 auto;
-        }
-        .status-badge.connected { background: #c6f6d5; color: #2f855a; }
-        .status-badge.error { background: #fed7d7; color: #c53030; }
-
+        /* أزرار التحكم العائمة */
         .controls {
             display: flex;
             justify-content: center;
             flex-wrap: wrap;
             gap: 8px;
-            padding: 8px;
+            padding: 10px;
             background-color: var(--control-bg);
             border-radius: 30px;
             position: fixed;
-            bottom: 10px;
+            bottom: 15px;
             left: 50%;
             transform: translateX(-50%);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             z-index: 100;
             width: max-content;
+            max-width: 95%;
         }
-        .controls button { padding: 8px 12px; min-width: 40px; font-size: 16px; }
+        .controls button { padding: 10px 15px; min-width: 45px; font-size: 18px; }
 
+        /* تعديلات لشاشات الساعات الصغيرة جداً */
         @media (max-width: 350px) {
             .container { padding: 10px; }
-            input[type="number"] { font-size: 24px; padding: 8px; }
-            button { font-size: 14px; padding: 10px; }
-            h2 { font-size: 20px; }
-            .controls { bottom: 5px; border-radius: 15px; width: 95%; }
-            .controls button { padding: 5px 8px; font-size: 14px; }
-            #text-display { padding-bottom: 60px; font-size: 20px; }
+            .controls { bottom: 5px; border-radius: 15px; width: 98%; padding: 5px;}
+            .controls button { padding: 8px 10px; font-size: 16px; min-width: 40px;}
+            #text-display { padding-bottom: 80px; }
         }
     </style>
 </head>
@@ -176,35 +150,17 @@
 
     <div class="container">
         
-        <!-- الشاشة الرئيسية -->
-        <div id="screen-setup" class="screen active">
-            <h2>القارئ المتصل ⌚📱</h2>
-            <p style="text-align: center; font-size: 14px; color: gray;">يعمل بتقنية الاتصال المباشر (بدون سيرفرات)</p>
-            
-            <div class="input-group">
-                <label>رقم القناة (4 أرقام):</label>
-                <input type="number" id="room-code" placeholder="1234" maxlength="4">
-            </div>
-
-            <button class="primary-btn" onclick="startMode('reader')">أنا القارئ (الساعة) ⌚</button>
-            <button class="success-btn" onclick="startMode('sender')">أنا المرسل (الهاتف) 📱</button>
-            
-            <div id="auth-status" class="status-badge">جاري الاتصال بالشبكة المباشرة...</div>
+        <!-- واجهة إدخال النص -->
+        <div id="input-section">
+            <h2 style="text-align: center; color: var(--primary);">القارئ البسيط</h2>
+            <textarea id="text-input" placeholder="الصق النص هنا..."></textarea>
+            <button class="primary-btn" onclick="startReading()">📖 ابدأ القراءة</button>
+            <button onclick="clearText()" style="background: #f56565; color: white;">🗑️ مسح النص</button>
         </div>
 
-        <!-- شاشة الهاتف (المرسل) -->
-        <div id="screen-sender" class="screen">
-            <h3>أنت المرسل 📱 (القناة: <span class="room-display"></span>)</h3>
-            <div class="status-badge connected">جاهز للإرسال الفوري</div>
-            <textarea id="text-input" placeholder="الصق النص هنا... واضغط إرسال وسيظهر فوراً على الساعة."></textarea>
-            <button class="primary-btn" onclick="sendText()" id="send-btn">إرسال النص للساعة 🚀</button>
-            <button onclick="goBack()" style="background: #e2e8f0; color: black;">رجوع ↩️</button>
-        </div>
-
-        <!-- شاشة الساعة (القارئ) -->
-        <div id="screen-reader" class="screen">
-            <div id="reader-status" class="status-badge connected" style="margin-bottom: 10px;">بانتظار النص من الهاتف...</div>
-            <div id="text-display" style="text-align: center; margin-top: 50px;">الرجاء إرسال النص من الهاتف للبدء...</div>
+        <!-- واجهة القراءة -->
+        <div id="reader-section">
+            <div id="text-display"></div>
             
             <div class="controls">
                 <button onclick="changeSize(4)">A+</button>
@@ -212,120 +168,66 @@
                 <button onclick="setTheme('dark')">🌙</button>
                 <button onclick="setTheme('light')">☀️</button>
                 <button onclick="setTheme('sepia')">📜</button>
-                <button onclick="goBack()" style="background: #f56565; color: white;">❌</button>
+                <button onclick="editMode()" style="background: #e2e8f0; color: black;">رجوع</button>
             </div>
         </div>
 
     </div>
 
     <script>
-        // توليد رقم عشوائي عند الفتح
-        document.getElementById('room-code').value = Math.floor(1000 + Math.random() * 9000);
+        const textInput = document.getElementById('text-input');
+        const textDisplay = document.getElementById('text-display');
+        const inputSection = document.getElementById('input-section');
+        const readerSection = document.getElementById('reader-section');
+        
+        let currentFontSize = 24;
 
-        // استخدام سيرفر EMQX العام وهو أسرع وأكثر استقراراً للاتصال المباشر
-        const brokerUrl = 'wss://broker.emqx.io:8084/mqtt'; 
-        let client = null;
-        let currentTopic = "";
-
-        function connectMQTT() {
-            if (client && client.connected) return;
-            
-            document.getElementById('auth-status').innerText = "جاري الاتصال...";
-            document.getElementById('auth-status').className = "status-badge";
-
-            client = mqtt.connect(brokerUrl);
-
-            client.on('connect', () => {
-                document.getElementById('auth-status').innerText = "متصل وجاهز للاستخدام ✔️";
-                document.getElementById('auth-status').className = "status-badge connected";
-            });
-
-            client.on('error', (err) => {
-                document.getElementById('auth-status').innerText = "فشل الاتصال، تأكد من الإنترنت ❌";
-                document.getElementById('auth-status').className = "status-badge error";
-            });
-        }
-
-        // الاتصال فوراً
-        connectMQTT();
-
-        function showScreen(screenId) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(screenId).classList.add('active');
-        }
-
-        function goBack() {
-            if (client && currentTopic) {
-                client.unsubscribe(currentTopic);
+        // عند فتح الصفحة، استرجاع النص المحفوظ سابقاً (إن وجد)
+        window.onload = function() {
+            const savedText = localStorage.getItem('savedReaderText');
+            if (savedText) {
+                textInput.value = savedText;
             }
-            showScreen('screen-setup');
-        }
+        };
 
-        function startMode(mode) {
-            const roomCode = document.getElementById('room-code').value;
-            if(!roomCode || roomCode.length < 3) return alert("الرجاء إدخال رقم قناة صحيح");
-            
-            if(!client || !client.connected) {
-                alert("يرجى الانتظار لحظة للاتصال بالشبكة...");
-                connectMQTT();
+        function startReading() {
+            const text = textInput.value.trim();
+            if(!text) {
+                alert("الرجاء لصق نص أولاً!");
                 return;
             }
 
-            // قناة خاصة بك تماماً
-            currentTopic = `elegant_reader_app_user_${roomCode}`;
-            document.querySelectorAll('.room-display').forEach(el => el.innerText = roomCode);
+            // حفظ النص في الجهاز لكي لا يضيع
+            localStorage.setItem('savedReaderText', text);
 
-            if(mode === 'sender') {
-                showScreen('screen-sender');
-            } else if (mode === 'reader') {
-                showScreen('screen-reader');
-                setupReader();
+            // عرض النص مع الحفاظ على الأسطر
+            textDisplay.innerHTML = text.replace(/\n/g, '<br><br>');
+            
+            // إخفاء الإدخال وإظهار القراءة
+            inputSection.style.display = 'none';
+            readerSection.style.display = 'flex';
+            
+            // تمرير الشاشة للأعلى
+            window.scrollTo(0, 0);
+        }
+
+        function editMode() {
+            inputSection.style.display = 'flex';
+            readerSection.style.display = 'none';
+        }
+
+        function clearText() {
+            if(confirm("هل أنت متأكد من مسح النص؟")) {
+                textInput.value = '';
+                localStorage.removeItem('savedReaderText');
             }
         }
 
-        function sendText() {
-            const text = document.getElementById('text-input').value.trim();
-            if(!text) return;
-
-            const btn = document.getElementById('send-btn');
-            btn.innerText = "جاري الإرسال...";
-
-            // إرسال النص مع الاحتفاظ به للساعة
-            client.publish(currentTopic, text, { retain: true, qos: 1 }, (error) => {
-                if(error) {
-                    alert("حدث خطأ أثناء الإرسال");
-                    btn.innerText = "إرسال النص للساعة 🚀";
-                } else {
-                    btn.innerText = "تم الإرسال بنجاح ✅";
-                    setTimeout(() => btn.innerText = "إرسال النص للساعة 🚀", 2000);
-                }
-            });
-        }
-
-        function setupReader() {
-            client.subscribe(currentTopic);
-
-            client.on('message', (topic, message) => {
-                if(topic === currentTopic) {
-                    const receivedText = message.toString();
-                    if(receivedText) {
-                        const display = document.getElementById('text-display');
-                        display.style.textAlign = 'justify';
-                        display.style.marginTop = '0';
-                        display.innerHTML = receivedText.replace(/\n/g, '<br><br>');
-                        document.getElementById('reader-status').style.display = 'none';
-                    }
-                }
-            });
-        }
-
-        // أزرار التحكم للساعة
-        let currentFontSize = 24;
         function changeSize(step) {
             currentFontSize += step;
             if(currentFontSize < 14) currentFontSize = 14;
-            if(currentFontSize > 70) currentFontSize = 70;
-            document.getElementById('text-display').style.fontSize = currentFontSize + 'px';
+            if(currentFontSize > 80) currentFontSize = 80;
+            textDisplay.style.fontSize = currentFontSize + 'px';
         }
 
         function setTheme(theme) {
