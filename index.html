@@ -231,25 +231,42 @@
             document.body.classList.add(themes[currentThemeIndex]);
         }
 
-        // جلب النص الديناميكي من مستند جوجل
+        // جلب النص الديناميكي من مستند جوجل مع ميزة البدائل التلقائية (Fallbacks)
         async function loadContent() {
             const docId = '1rtqMA2bRaezFcqbMwAEWAwX4ZrBEsKvFnjrFg6KbS4Q';
-            // رابط تصدير الملف كنص من جوجل درايف
             const exportUrl = `https://docs.google.com/document/export?format=txt&id=${docId}`;
-            // استخدام بروكسي عام لتجاوز حماية المتصفح (CORS) والسماح بقراءة الملف
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(exportUrl)}`;
+            
+            // قائمة بوسطاء (Proxies) لضمان عدم فشل الجلب إذا تعطل أحدهم
+            const proxies = [
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(exportUrl)}`,
+                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(exportUrl)}`,
+                `https://corsproxy.io/?${encodeURIComponent(exportUrl)}`
+            ];
 
-            try {
-                const response = await fetch(proxyUrl);
-                if (!response.ok) throw new Error('فشل الاتصال بالخادم');
-                
-                const text = await response.text();
-                
-                // التأكد من أن الملف عام وليس صفحة تسجيل دخول
-                if (text.includes('<!DOCTYPE html>')) {
-                    throw new Error('يرجى التأكد من أن إعدادات مشاركة المستند هي "أي شخص لديه الرابط".');
+            let success = false;
+            let text = '';
+
+            // محاولة الجلب باستخدام الوسطاء بالتسلسل
+            for (let proxyUrl of proxies) {
+                try {
+                    const response = await fetch(proxyUrl, { cache: "no-store" }); // إيقاف التخزين المؤقت لضمان أحدث نسخة
+                    if (!response.ok) continue; // إذا فشل هذا الوسيط، انتقل للذي يليه
+                    
+                    text = await response.text();
+                    
+                    // التحقق من أن النص ليس صفحة تسجيل دخول (HTML)
+                    if (text.includes('<!DOCTYPE html>') || text.includes('<html')) {
+                        continue; 
+                    }
+
+                    success = true;
+                    break; // نجحت العملية، اخرج من الحلقة
+                } catch (err) {
+                    console.log("فشل الوسيط، جاري تجربة البديل...");
                 }
+            }
 
+            if (success && text.trim().length > 0) {
                 // تحويل النص إلى فقرات HTML
                 const paragraphs = text.split('\n')
                                        .map(p => p.trim())
@@ -258,13 +275,13 @@
                                        .join('');
 
                 document.getElementById('content').innerHTML = `<h1>مختارات من دعاء القنوت</h1>${paragraphs}`;
-                
-            } catch (error) {
+            } else {
+                // في حالة فشل جميع الوسطاء
                 document.getElementById('content').innerHTML = `
                     <div style="text-align:center; margin-top:50px;">
-                        <h3 style="color:#c0392b;">عذراً، حدث خطأ أثناء جلب النص</h3>
-                        <p>${error.message}</p>
-                        <button class="control-btn" style="width:auto; padding:0 20px; border-radius:20px; margin:20px auto;" onclick="loadContent()">إعادة المحاولة</button>
+                        <h3 style="color:#c0392b;">عذراً، فشل الاتصال بالخوادم</h3>
+                        <p>يرجى التأكد من اتصالك بالإنترنت، أو أن المستند متاح للعامة.</p>
+                        <button class="control-btn" style="width:auto; padding:0 20px; border-radius:20px; margin:20px auto;" onclick="location.reload()">تحديث الصفحة</button>
                     </div>
                 `;
             }
@@ -275,4 +292,3 @@
     </script>
 </body>
 </html>
-
